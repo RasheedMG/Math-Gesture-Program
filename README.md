@@ -1,3 +1,3 @@
 # Math-Gesture-Program
 
-Link to wesbite: https://math-gesture-program.netlify.app/
+Link to website: https://math-gesture-program.netlify.app/
