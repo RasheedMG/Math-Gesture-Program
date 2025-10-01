@@ -46,6 +46,7 @@ export default function Numbers() {
   const [score, setScore] = useState(0);
   const [evilActive, setEvilActive] = useState(false);
   const [evilSpeed, setEvilSpeed] = useState(1); // tiles per second
+  const [inputPaused, setInputPaused] = useState(false); // pause input and evil after correct answer
 
   // Animation state
   const [playerDisplayPos, setPlayerDisplayPos] = useState(0);
@@ -71,14 +72,14 @@ export default function Numbers() {
 
   // --- Evil emoji movement ---
   useEffect(() => {
-    if (gameOver || !evilActive) return;
+    if (gameOver || !evilActive || inputPaused) return;
     let lastTime = Date.now();
     let acc = 0.04; // acceleration in tiles/sec^2
     let speed = evilSpeed;
     let pos = evilPos;
     let anim;
     function move() {
-      if (gameOver || !evilActive) return;
+      if (gameOver || !evilActive || inputPaused) return;
       const now = Date.now();
       const dt = (now - lastTime) / 1000; // seconds
       lastTime = now;
@@ -97,7 +98,7 @@ export default function Numbers() {
     anim = requestAnimationFrame(move);
     return () => cancelAnimationFrame(anim);
     // eslint-disable-next-line
-  }, [playerPos, gameOver, evilActive]);
+  }, [playerPos, gameOver, evilActive, inputPaused]);
 
   // --- Hand detection for number input ---
   useEffect(() => {
@@ -210,7 +211,7 @@ export default function Numbers() {
 
         // Only allow answers 0-10 for student input (but equation answer is 1-10)
         const totalFingers = Math.max(0, Math.min(10, smoothTotal(per.reduce((a,b)=>a+b,0))));
-        setInputNum(totalFingers);
+        if (!inputPaused) setInputNum(totalFingers);
 
         rafRef.current = requestAnimationFrame(loop);
       };
@@ -227,7 +228,7 @@ export default function Numbers() {
 
   // --- Answer checking ---
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver || inputPaused) return;
     // Only check if inputNum changed and is stable (not 0)
     if (inputNum !== lastInput && inputNum === equation.answer) {
       setLastInput(inputNum);
@@ -235,11 +236,13 @@ export default function Numbers() {
       setPlayerPos(pos => pos + inputNum); // No clamp, infinite track
       setEquation(getRandomEquation());
       if (!evilActive) setEvilActive(true); // Start evil movement after first answer
+      setInputPaused(true); // Pause input and evil
+      setTimeout(() => setInputPaused(false), 500); // 0.5s pause
       // Prevent repeated triggers for same input
       setTimeout(() => setLastInput(0), 1200);
     }
     // eslint-disable-next-line
-  }, [inputNum, equation, gameOver]);
+  }, [inputNum, equation, gameOver, inputPaused]);
 
   function restart() {
     setEquation(getRandomEquation());
@@ -252,6 +255,7 @@ export default function Numbers() {
     setLastInput(0);
     setEvilActive(false);
     setEvilSpeed(1); // reset speed
+    setInputPaused(false);
   }
 
   // --- Equation rendering helper ---
