@@ -74,7 +74,7 @@ export default function Numbers() {
   useEffect(() => {
     if (gameOver || !evilActive || inputPaused) return;
     let lastTime = Date.now();
-    let acc = 0.04; // acceleration in tiles/sec^2
+    let acc = 0.01; // acceleration in tiles/sec^2
     let speed = evilSpeed;
     let pos = evilPos;
     let anim;
