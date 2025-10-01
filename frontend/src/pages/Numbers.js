@@ -173,14 +173,14 @@ export default function Numbers() {
       })();
 
       const drawHand = (l) => {
-        const pairs = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
-        ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.fillStyle = "rgba(255,255,255,.95)";
-        for (const [a,b] of pairs) {
-          const A=l[a], B=l[b];
-          ctx.beginPath(); ctx.moveTo(A.x*canvas.width, A.y*canvas.height);
-          ctx.lineTo(B.x*canvas.width, B.y*canvas.height); ctx.stroke();
-        }
-        for (const p of l) { ctx.beginPath(); ctx.arc(p.x*canvas.width, p.y*canvas.height, 3.5, 0, Math.PI*2); ctx.fill(); }
+        // const pairs = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20]];
+        // ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.fillStyle = "rgba(255,255,255,.95)";
+        // for (const [a,b] of pairs) {
+        //   const A=l[a], B=l[b];
+        //   ctx.beginPath(); ctx.moveTo(A.x*canvas.width, A.y*canvas.height);
+        //   ctx.lineTo(B.x*canvas.width, B.y*canvas.height); ctx.stroke();
+        // }
+        // for (const p of l) { ctx.beginPath(); ctx.arc(p.x*canvas.width, p.y*canvas.height, 3.5, 0, Math.PI*2); ctx.fill(); }
       };
 
       const loop = async () => {
@@ -197,13 +197,12 @@ export default function Numbers() {
             const cnt = countHand(l);
             per.push(cnt);
             drawHand(l);
-
-            // label near wrist
-            const w = l[0];
-            ctx.fillStyle="rgba(0,0,0,.65)";
-            ctx.fillRect(w.x*canvas.width - 28, w.y*canvas.height - 36, 56, 26);
-            ctx.fillStyle="#fff"; ctx.font="bold 16px system-ui"; ctx.textAlign="center";
-            ctx.fillText(String(cnt), w.x*canvas.width, w.y*canvas.height - 18);
+            // Remove: label near wrist
+            // const w = l[0];
+            // ctx.fillStyle="rgba(0,0,0,.65)";
+            // ctx.fillRect(w.x*canvas.width - 28, w.y*canvas.height - 36, 56, 26);
+            // ctx.fillStyle="#fff"; ctx.font="bold 16px system-ui"; ctx.textAlign="center";
+            // ctx.fillText(String(cnt), w.x*canvas.width, w.y*canvas.height - 18);
           }
         } else {
           per=[0,0];
