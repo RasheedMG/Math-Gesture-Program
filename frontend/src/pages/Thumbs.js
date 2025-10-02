@@ -4,6 +4,8 @@ import { FilesetResolver, GestureRecognizer } from "@mediapipe/tasks-vision";
 const MAX_TIME = 15; // seconds
 const TIME_INC = 3;  // seconds added per correct answer (capped at MAX_TIME)
 const EVIL_EMOJI = "😈"; // Or use an <img src="..." /> if you prefer
+const HEART = "❤️";
+const MAX_LIVES = 3;
 
 function getRandomEquation() {
   // Generate a random equation, sometimes true, sometimes false
@@ -35,6 +37,7 @@ export default function Thumbs() {
   const [gameOver, setGameOver] = useState(false);
   const [label, setLabel] = useState("Initializing…");
   const [cooldownUntil, setCooldownUntil] = useState(0); // Add cooldown state
+  const [lives, setLives] = useState(MAX_LIVES);
 
   // Timer effect
   useEffect(() => {
@@ -121,7 +124,15 @@ export default function Thumbs() {
             setTimer(t => Math.min(t + TIME_INC, MAX_TIME));
             setEquation(getRandomEquation());
           } else {
-            setGameOver(true);
+            setLives(l => {
+              if (l > 1) {
+                setEquation(getRandomEquation());
+                return l - 1;
+              } else {
+                setGameOver(true);
+                return 0;
+              }
+            });
           }
         }
 
@@ -145,6 +156,7 @@ export default function Thumbs() {
     setEquation(getRandomEquation());
     setGameOver(false);
     setCooldownUntil(0); // Reset cooldown on restart
+    setLives(MAX_LIVES); // Reset lives on restart
   }
 
   // Evil emoji size grows as timer runs out
@@ -156,6 +168,11 @@ export default function Thumbs() {
         <video ref={videoRef} muted playsInline style={{display:"none"}} />
         <canvas ref={canvasRef} width={640} height={480} className="view" />
         <div className="badge">
+          <div style={{marginBottom: 6, fontSize: "1.2em"}}>
+            {Array.from({length: lives}).map((_,i) => (
+              <span key={i} style={{marginRight:2}}>{HEART}</span>
+            ))}
+          </div>
           {gameOver ? (
             <>
               <div style={{fontSize: "2em"}}>Game Over!</div>
