@@ -524,7 +524,7 @@ export default function Numbers() {
           {!started && !gameOver && (
             <div className="overlay start">
               <div className="overlay-card">
-                <div className="title">Math Steps</div>
+                <div className="title">Count & Run</div>
                 <div className="sub">Show the correct number with your fingers</div>
                 <button onClick={startGame} className="btn">Start</button>
                 <div className="tip">Question appears after you press Start</div>
