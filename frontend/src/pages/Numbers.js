@@ -13,13 +13,14 @@ import L_FAR  from "../assets/bg/2.png"; // far trunks (transparent)
 import L_MID  from "../assets/bg/3.png"; // mid trees  (transparent)
 import L_NEAR from "../assets/bg/4.png"; // near trees (transparent)
 
-// ---------- Game constants ----------
-const SHOW_PREVIEW = false; // keep camera hidden; tracking still works
-
-// Scene scale
+// ---------- Scene / camera constants ----------
 const PX_PER_TILE = 32;
 const VIEW_W = 640;
 const VIEW_H = 480;
+
+// Mini visible camera preview (4:3)
+const PREVIEW_W = 160;
+const PREVIEW_H = 120;
 
 // Parallax multipliers
 const PAR_FAR = 0.25, PAR_MID = 0.50, PAR_NEAR = 0.90;
@@ -53,7 +54,9 @@ const BUBBLE_LEFT_MARGIN   = 16; // px from left edge when evil is far
 const BUBBLE_W             = 150;
 const BUBBLE_H             = 100;
 
-// ---------------- SpriteSheet ----------------
+/* =========================================================
+   SpriteSheet (single-row)
+   ========================================================= */
 function SpriteSheet({
   src,
   frames = 4,
@@ -121,11 +124,14 @@ function SpriteSheet({
   );
 }
 
-// ---------------- Numbers Game ----------------
+/* ===========================
+          Numbers Game
+   =========================== */
 export default function Numbers() {
   // camera/vision refs
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  const canvasRef = useRef(null); // hidden processing canvas (kept at 0 opacity)
+  const previewRef = useRef(null); // visible mini camera in top-right
   const rafRef = useRef(null);
   const landmarkerRef = useRef(null);
   const setupOnceRef = useRef(false);
@@ -200,7 +206,7 @@ export default function Numbers() {
     // eslint-disable-next-line
   }, [playerPos, gameOver, evilActive, inputPaused, started]);
 
-  // hand-tracking init (StrictMode-safe)
+  // --- hand-tracking init (StrictMode-safe) ---
   useEffect(() => {
     if (setupOnceRef.current) return;
     setupOnceRef.current = true;
@@ -210,7 +216,10 @@ export default function Numbers() {
 
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { width: VIEW_W, height: VIEW_H } });
+        // 1) Camera
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: VIEW_W, height: VIEW_H }
+        });
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
 
         const video = videoRef.current;
@@ -218,9 +227,13 @@ export default function Numbers() {
         video.playsInline = true;
         video.srcObject = stream;
 
-        await new Promise(res => { if (video.readyState >= 1) res(); else video.onloadedmetadata = () => res(); });
+        await new Promise(res => {
+          if (video.readyState >= 1) res();
+          else video.onloadedmetadata = () => res();
+        });
         await video.play().catch(() => {});
 
+        // 2) MediaPipe
         const vision = await FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
         );
@@ -238,10 +251,10 @@ export default function Numbers() {
           minTrackingConfidence: 0.3,
         });
 
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
+        // 3) Visible mini preview (top-right)
+        const pctx = previewRef.current?.getContext("2d");
 
-        // helpers to count fingers
+        // ---- helpers to count fingers ----
         const angleAt = (v, a, c) => {
           const abx=a.x-v.x, aby=a.y-v.y, abz=(a.z??0)-(v.z??0);
           const cbx=c.x-v.x, cby=c.y-v.y, cbz=(c.z??0)-(v.z??0);
@@ -277,36 +290,42 @@ export default function Numbers() {
           const win = [];
           return (v) => {
             win.push(v); if (win.length > 7) win.shift();
-            const counts = win.reduce((m, x) => {
-              m[x] = (m[x] || 0) + 1;
-              return m;
-            }, {});
+            const counts = win.reduce((m,x)=> (m[x]=(m[x]||0)+1,m),{});
             return parseInt(Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0],10);
           };
         })();
 
+        // 4) Loop: detect -> compute -> update -> draw preview
         const loop = async () => {
           if (cancelled) return;
-          const res = await landmarkerRef.current.detectForVideo(video, performance.now());
 
-          if (SHOW_PREVIEW) {
-            ctx.save(); ctx.scale(-1,1);
-            ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-            ctx.restore();
-          } else {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-          }
+          // Detect & get landmarks
+          const res = await landmarkerRef.current.detectForVideo(
+            video,
+            performance.now()
+          );
 
+          // Compute finger total from landmarks
           let per = [];
-          if (res.landmarks?.length) for (const l of res.landmarks) per.push(countHand(l));
-          else per=[0,0];
-
-          const totalFingers = Math.max(0, Math.min(10, smoothTotal(per.reduce((a,b)=>a+b,0))));
-          // Block inputs before start or when paused
-          if (!started || inputPaused || gameOver) {
-            setInputNum(totalFingers);
+          if (res.landmarks?.length) {
+            for (const l of res.landmarks) per.push(countHand(l));
           } else {
-            setInputNum(totalFingers);
+            per = [0,0];
+          }
+          const totalFingers = Math.max(
+            0,
+            Math.min(10, smoothTotal(per.reduce((a,b)=>a+b,0)))
+          );
+          setInputNum(totalFingers);
+
+          // Draw mirrored preview in top-right
+          if (pctx) {
+            pctx.clearRect(0, 0, PREVIEW_W, PREVIEW_H);
+            pctx.save();
+            pctx.translate(PREVIEW_W, 0);
+            pctx.scale(-1, 1);
+            pctx.drawImage(video, 0, 0, PREVIEW_W, PREVIEW_H);
+            pctx.restore();
           }
 
           rafRef.current = requestAnimationFrame(loop);
@@ -318,7 +337,7 @@ export default function Numbers() {
     })();
 
     return () => {
-      let cancelled = true;
+      cancelled = true;
       cancelAnimationFrame(rafRef.current);
       landmarkerRef.current?.close();
       if (videoRef.current && videoRef.current.srcObject) {
@@ -336,7 +355,7 @@ export default function Numbers() {
     if (inputNum !== lastInput && inputNum === equation.answer) {
       setLastInput(inputNum);
       setScore(s => s + 1);
-      setStreak(st => st + 1);                // advance streak on each correct
+      setStreak(st => st + 1);
       setPlayerPos(pos => pos + inputNum);
       setEquation(getRandomEquation());
       setInputPaused(true);
@@ -353,8 +372,8 @@ export default function Numbers() {
     // Play ambient after the click (autoplay-safe)
     const a = bgmRef.current;
     if (a) {
-      a.volume = 0.35;      // tweak 0.0–1.0
-      a.currentTime = 0;    // restart each run
+      a.volume = 0.35;
+      a.currentTime = 0;
       a.play().catch(() => {});
     }
   }
@@ -460,7 +479,7 @@ export default function Numbers() {
               />
           </div>
 
-          {/* Evil (hidden when very far) — unchanged */}
+          {/* Evil (hidden when very far) */}
           {!isEvilFar && (
             <div className="actor" style={{ left: evilXClamped, bottom: GROUND_FROM_BOTTOM }}>
               <SpriteSheet
@@ -493,6 +512,14 @@ export default function Numbers() {
             </div>
           )}
         </div>
+
+        {/* Visible mini camera preview */}
+        <canvas
+          ref={previewRef}
+          className="preview-cam"
+          width={PREVIEW_W}
+          height={PREVIEW_H}
+        />
 
         {/* Hidden camera canvas (for hand tracking only) */}
         <video ref={videoRef} muted playsInline style={{display:"none"}} />
@@ -579,7 +606,6 @@ function PageShell({ children }) {
     <div style={{
       position: "fixed", inset: 0, background: "#0b0b0b",
       display: "grid", placeItems: "center", overflow: "hidden",
-      // pass scale to CSS via custom property
       ["--s"]: scale
     }}>
       {children}
@@ -617,8 +643,23 @@ function Style() {
       .actors { position:absolute; inset:0; z-index: 4; pointer-events:none; }
       .actor  { position:absolute; transform: translateX(-50%); }
 
-      /* Camera canvas (kept underneath actors) */
+      /* Hidden processing canvas (kept underneath actors) */
       .view  { position:absolute; inset:0; z-index: 2; opacity:0; }
+
+      /* Visible mini camera in top-right */
+      .preview-cam{
+        position:absolute;
+        top:12px;
+        right:12px;
+        z-index: 8;
+        width: ${PREVIEW_W}px;
+        height: ${PREVIEW_H}px;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.35);
+        background: #000;
+        outline: 2px solid rgba(255,255,255,.15);
+        pointer-events: none;
+      }
 
       /* UI on top */
       .game-ui { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; z-index:6; pointer-events:none; }
