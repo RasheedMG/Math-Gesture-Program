@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FilesetResolver, GestureRecognizer } from "@mediapipe/tasks-vision";
+import { motion, AnimatePresence } from "framer-motion";
 
 const MAX_TIME = 15; // seconds
 const TIME_INC = 3;  // seconds added per correct answer (capped at MAX_TIME)
@@ -220,9 +221,20 @@ export default function Thumbs() {
         {!showInstructions && (
           <>
             <div className="equation-center">
-              <span style={{fontSize:"3.5em",fontWeight:700}}>{equation.text}</span>
-              {!gameOver}
+              <AnimatePresence mode="wait">
+                <motion.span
+                key={equation.text} // triggers animation when text changes
+                initial={{ x: -200, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 200, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                style={{ display: "inline-block", fontSize: "3.5em", fontWeight: 700 }}
+                >
+                  {equation.text}
+                </motion.span>
+              </AnimatePresence>
             </div>
+
             <div className="badge" style={{display: gameOver ? "block" : "none"}}>
               <div style={{fontSize: "2em"}}>Game Over!</div>
               <div>Score: {score}</div>
