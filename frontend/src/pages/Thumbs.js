@@ -40,6 +40,9 @@ export default function Thumbs() {
   const [cooldownUntil, setCooldownUntil] = useState(0); // Add cooldown state
   const [lives, setLives] = useState(MAX_LIVES);
   const [showInstructions, setShowInstructions] = useState(true);
+  const [feedback, setFeedback] = useState(null); // "correct" | "wrong" | null
+  const [lostHeartIndex, setLostHeartIndex] = useState(null);
+
 
   // Timer effect
   useEffect(() => {
@@ -138,20 +141,31 @@ export default function Thumbs() {
             const isUp = smoothed.startsWith("Thumb_Up");
             const correct = (isUp && equation.answer) || (!isUp && !equation.answer);
             if (correct) {
-              setScore(s => s + 1);
-              setTimer(t => Math.min(t + TIME_INC, MAX_TIME));
-              setEquation(getRandomEquation());
+              setFeedback("correct");
+              setTimeout(() => {
+                setFeedback(null);
+                setScore(s => s + 1);
+                setTimer(t => Math.min(t + TIME_INC, MAX_TIME));
+                setEquation(getRandomEquation());
+              }, 700); // short delay for checkmark animation
             } else {
-              setLives(l => {
-                if (l > 1) {
-                  setEquation(getRandomEquation());
-                  return l - 1;
-                } else {
-                  setGameOver(true);
-                  return 0;
-                }
-              });
+              setFeedback("wrong");
+              setLostHeartIndex(lives - 1);
+              setTimeout(() => {
+                setFeedback(null);
+                setLostHeartIndex(null);
+                setLives(l => {
+                  if (l > 1) {
+                    setEquation(getRandomEquation());
+                    return l - 1;
+                  } else {
+                    setGameOver(true);
+                    return 0;
+                  }
+                });
+              }, 900);
             }
+
           }
         }
 
@@ -196,9 +210,54 @@ export default function Thumbs() {
         {/* Lives top right */}
         {!showInstructions && (
           <div className="lives-badge">
-            {Array.from({length: lives}).map((_,i) => (
-              <span key={i} style={{marginRight:2}}>{HEART}</span>
-            ))}
+            {Array.from({ length: MAX_LIVES }).map((_, i) => {
+              const isLost = i >= lives; // mark hearts beyond remaining lives as lost
+              return (
+                <motion.span
+                  key={i}
+                  animate={{
+                    scale: isLost ? 0 : 1,
+                    opacity: isLost ? 0 : 1,
+                  }}
+                  transition={{ duration: 0.4 }}
+                  style={{
+                    marginRight: 2,
+                    display: "inline-block",
+                    transformOrigin: "center",
+                  }}
+                >
+                  {HEART}
+                </motion.span>
+              );
+            })}
+          <AnimatePresence>
+            {feedback === "wrong" && lostHeartIndex !== null && (
+              <motion.div
+                key="wrong-x"
+                initial={{ scale: 3, opacity: 1, x: 0, y: 0 }}
+                animate={{
+                  scale: 0.5,
+                  opacity: 0,
+                  x: 220 - lostHeartIndex * 40,  // horizontal offset toward hearts
+                  y: -180,                       // vertical offset toward hearts
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.9, ease: "easeInOut" }}
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)", // 👈 centers it precisely
+                  fontSize: "6em",
+                  color: "#f55",
+                  zIndex: 5,
+                  pointerEvents: "none",
+                }}
+              >
+                ✕
+              </motion.div>
+            )}
+          </AnimatePresence>
           </div>
         )}
         {/* Instructions overlay */}
@@ -232,6 +291,28 @@ export default function Thumbs() {
                 >
                   {equation.text}
                 </motion.span>
+              </AnimatePresence>
+              <AnimatePresence>
+                {feedback === "correct" && (
+                  <motion.div
+                    key="checkmark"
+                    initial={{ scale: 0, opacity: 0, rotate: -30 }}
+                    animate={{ scale: 1.5, opacity: 1, rotate: 0 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "55%",
+                      transform: "translate(-50%, -50%)",
+                      fontSize: "5em",
+                      color: "#5f5",
+                      zIndex: 5
+                    }}
+                  >
+                    ✓
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
 
