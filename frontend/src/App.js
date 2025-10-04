@@ -1,8 +1,8 @@
 import logo from './logo.svg';
 import './App.css';
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import Thumbs from "./pages/Thumbs.js";
-import Numbers from "./pages/Numbers.js";
+import Thumbs from "./pages/Thumbs";
+import Numbers from "./pages/Numbers"; // If you have a Numbers page
 
 const btnStyle = {
   display:"block", margin:"10px 0", padding:"12px 16px",
@@ -25,8 +25,8 @@ function App() {
               </div>
             }
           />
-          <Route path="/thumbs" element={<Thumbs/>} />
-          <Route path="/numbers" element={<Numbers/>} />
+          <Route path="/thumbs" element={<Thumbs />} />
+          <Route path="/numbers" element={<Numbers />} /> {/* If exists */}
         </Routes>
       </div>
     </BrowserRouter>
