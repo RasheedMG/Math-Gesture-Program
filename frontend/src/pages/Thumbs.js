@@ -38,17 +38,26 @@ export default function Thumbs() {
   const [label, setLabel] = useState("Initializing…");
   const [cooldownUntil, setCooldownUntil] = useState(0); // Add cooldown state
   const [lives, setLives] = useState(MAX_LIVES);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   // Timer effect
   useEffect(() => {
-    if (gameOver) return;
-    if (timer <= 0) {
-      setGameOver(true);
-      return;
-    }
-    const id = setInterval(() => setTimer(t => t - 0.1), 100);
-    return () => clearInterval(id);
-  }, [timer, gameOver]);
+    if (gameOver || showInstructions) return;
+
+    const id = setInterval(() => {
+      setTimer(t => {
+        if (t <= 0.1) {
+          clearInterval(id);
+          setGameOver(true);
+          return 0;
+        }
+        return t - 0.1;
+      });
+    }, 100);
+
+  return () => clearInterval(id);
+}, [gameOver, showInstructions]);
+
 
   // Gesture recognition effect
   useEffect(() => {
@@ -90,7 +99,7 @@ export default function Thumbs() {
       let lastTime = 0;
 
       const loop = async () => {
-        if (!mounted || gameOver) return;
+        if (!mounted) return;
         const res = await recognizerRef.current.recognizeForVideo(video, performance.now());
         let txt = "No gesture";
         if (res.gestures?.length && res.gestures[0]?.length) {
@@ -105,34 +114,43 @@ export default function Thumbs() {
         ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
         ctx.restore();
 
-        // Detect thumbs up/down and process answer
-        // Only accept a new gesture if it's different from the last and not "No gesture"
-        const now = Date.now();
-        if (
-          !gameOver &&
-          now > cooldownUntil && // Only allow answer if cooldown has passed
-          (smoothed.startsWith("Thumb_Up") || smoothed.startsWith("Thumb_Down")) &&
-          (smoothed !== lastGesture || now - lastTime > 1500)
-        ) {
-          lastGesture = smoothed;
-          lastTime = now;
-          setCooldownUntil(now + 1000); // 1 second cooldown after each answer
-          const isUp = smoothed.startsWith("Thumb_Up");
-          const correct = (isUp && equation.answer) || (!isUp && !equation.answer);
-          if (correct) {
-            setScore(s => s + 1);
-            setTimer(t => Math.min(t + TIME_INC, MAX_TIME));
-            setEquation(getRandomEquation());
-          } else {
-            setLives(l => {
-              if (l > 1) {
-                setEquation(getRandomEquation());
-                return l - 1;
-              } else {
-                setGameOver(true);
-                return 0;
-              }
-            });
+        // Instructions page: wait for thumbs up to start
+        if (showInstructions && smoothed.startsWith("Thumb_Up")) {
+          setShowInstructions(false);
+          return rafRef.current = requestAnimationFrame(loop);
+        }
+
+        // Only run game logic if not showing instructions
+        if (!showInstructions) {
+          // Detect thumbs up/down and process answer
+          // Only accept a new gesture if it's different from the last and not "No gesture"
+          const now = Date.now();
+          if (
+            !gameOver &&
+            now > cooldownUntil && // Only allow answer if cooldown has passed
+            (smoothed.startsWith("Thumb_Up") || smoothed.startsWith("Thumb_Down")) &&
+            (smoothed !== lastGesture || now - lastTime > 1500)
+          ) {
+            lastGesture = smoothed;
+            lastTime = now;
+            setCooldownUntil(now + 1000); // 1 second cooldown after each answer
+            const isUp = smoothed.startsWith("Thumb_Up");
+            const correct = (isUp && equation.answer) || (!isUp && !equation.answer);
+            if (correct) {
+              setScore(s => s + 1);
+              setTimer(t => Math.min(t + TIME_INC, MAX_TIME));
+              setEquation(getRandomEquation());
+            } else {
+              setLives(l => {
+                if (l > 1) {
+                  setEquation(getRandomEquation());
+                  return l - 1;
+                } else {
+                  setGameOver(true);
+                  return 0;
+                }
+              });
+            }
           }
         }
 
@@ -148,15 +166,16 @@ export default function Thumbs() {
       stream?.getTracks()?.forEach(t => t.stop());
     };
     // eslint-disable-next-line
-  }, [gameOver, equation, cooldownUntil]); // Add cooldownUntil to dependencies
+  }, [gameOver, equation, cooldownUntil, showInstructions]);
 
   function restart() {
     setScore(0);
     setTimer(MAX_TIME);
     setEquation(getRandomEquation());
     setGameOver(false);
-    setCooldownUntil(0); // Reset cooldown on restart
-    setLives(MAX_LIVES); // Reset lives on restart
+    setCooldownUntil(0);
+    setLives(MAX_LIVES);
+    setShowInstructions(true);
   }
 
   // Evil emoji size grows as timer runs out
@@ -167,26 +186,51 @@ export default function Thumbs() {
       <div className="stage">
         <video ref={videoRef} muted playsInline style={{display:"none"}} />
         <canvas ref={canvasRef} width={640} height={480} className="view" />
-        <div className="badge">
-          <div style={{marginBottom: 6, fontSize: "1.2em"}}>
+        {/* Score top left */}
+        {!showInstructions && (
+          <div className="score-badge">
+            Score: {score}
+          </div>
+        )}
+        {/* Lives top right */}
+        {!showInstructions && (
+          <div className="lives-badge">
             {Array.from({length: lives}).map((_,i) => (
               <span key={i} style={{marginRight:2}}>{HEART}</span>
             ))}
           </div>
-          {gameOver ? (
-            <>
+        )}
+        {/* Instructions overlay */}
+        {showInstructions && (
+          <div className="instructions-overlay">
+            <h2 style={{fontSize:"2.2em",marginBottom:12}}>How to Play</h2>
+            <ul style={{fontSize:"1.2em",textAlign:"left",margin:"0 auto",maxWidth:400}}>
+              <li>Math equation will appear in the center.</li>
+              <li>Show <span style={{fontSize:"1.3em"}}>👍</span> for <b>True</b>, <span style={{fontSize:"1.3em"}}>👎</span> for <b>False</b>.</li>
+              <li>Each correct answer adds time.</li>
+              <li>You have 3 lives. Wrong answers lose a life.</li>
+              <li>Game ends when time or lives run out.</li>
+            </ul>
+            <div style={{marginTop:24,fontSize:"1.3em"}}>
+              Show <span style={{fontSize:"1.5em"}}>👍</span> to start!
+            </div>
+          </div>
+        )}
+        {/* Game badge and equation */}
+        {!showInstructions && (
+          <>
+            <div className="equation-center">
+              <span style={{fontSize:"3.5em",fontWeight:700}}>{equation.text}</span>
+              {!gameOver}
+            </div>
+            <div className="badge" style={{display: gameOver ? "block" : "none"}}>
               <div style={{fontSize: "2em"}}>Game Over!</div>
               <div>Score: {score}</div>
               <button onClick={restart} style={{marginTop:8}}>Restart</button>
-            </>
-          ) : (
-            <>
-              <div style={{fontSize:"1.5em", marginBottom: 4}}>{equation.text}</div>
-              <div style={{fontSize:"1em"}}>👍 = True, 👎 = False</div>
-              <div style={{marginTop:4}}>Score: {score}</div>
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
+        {/* Evil emoji and timer bar */}
         <div
           className="evil-emoji"
           style={{
@@ -236,10 +280,36 @@ function Style() {
     .stage { position:relative; width:640px; height:480px; }
     .view { width:640px; height:480px; border-radius:12px; }
     .badge {
-      position:absolute; top:12px; left:12px;
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       background:rgba(0,0,0,.7); color:#fff; padding:12px 16px; border-radius:10px;
       font-weight:600; letter-spacing:.3px; min-width: 220px;
-      z-index:2;
+      z-index:3;
+      text-align:center;
+    }
+    .score-badge {
+      position:absolute; top:12px; left:16px;
+      background:rgba(0,0,0,.7); color:#fff; padding:8px 16px; border-radius:10px;
+      font-weight:600; font-size:1.2em; z-index:2;
+    }
+    .lives-badge {
+      position:absolute; top:12px; right:16px;
+      background:rgba(0,0,0,.7); color:#fff; padding:8px 16px; border-radius:10px;
+      font-weight:600; font-size:1.2em; z-index:2;
+      min-width: 80px; text-align:right;
+    }
+    .equation-center {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      text-align:center; z-index:2;
+      background:rgba(0,0,0,.5); padding:24px 32px; border-radius:18px;
+      min-width:320px;
+    }
+    .instructions-overlay {
+      position:absolute; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,.85); color:#fff; z-index:10;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      border-radius:12px;
+      text-align:center;
+      padding:32px 0;
     }
     .evil-emoji {
       user-select: none;
