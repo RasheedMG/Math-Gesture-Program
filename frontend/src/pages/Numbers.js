@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 
-// ======= ASSET IMPORTS (yours) =======
-import idleSheet  from "../assets/Characters/Owlet_Monster_Idle_4.png"; // player (4x1)
-import idleSheetE from "../assets/Characters/evil_4x1.png";              // evil   (4x1)
-import bubbleLeft from "../assets/bg/bubble2_left.png";                  // left-facing bubble
-import forestLoop from "../assets/bg/Sound.mp3";                         // forest ambience
+// ======= ASSET IMPORTS =======
+import salmanGif from "../assets/Characters/Salman.gif"; // 1-frame GIF
+import najdGif   from "../assets/Characters/Najd.gif";   // 1-frame GIF
+import idleSheetE from "../assets/Characters/evil_4x1.png";              // evil
+import bubbleLeft from "../assets/bg/bubble2_left.png";                  // left bubble
+import forestLoop from "../assets/bg/Sound.mp3";                         // ambience
 
 // ======= PARALLAX LAYERS =======
-import L_BASE from "../assets/bg/1.png"; // ground + backdrop (opaque)
-import L_FAR  from "../assets/bg/2.png"; // far trunks (transparent)
-import L_MID  from "../assets/bg/3.png"; // mid trees  (transparent)
-import L_NEAR from "../assets/bg/4.png"; // near trees (transparent)
+import L_BASE from "../assets/bg/1.png";
+import L_FAR  from "../assets/bg/2.png";
+import L_MID  from "../assets/bg/3.png";
+import L_NEAR from "../assets/bg/4.png";
 
 // ---------- Scene / camera constants ----------
 const PX_PER_TILE = 32;
@@ -33,7 +34,7 @@ const SPRITE_H = 80;
 const GROUND_FROM_BOTTOM = 54;
 const PLAYER_SCREEN_X = 380;
 
-// Player sheet (4x1)
+// Player sheet (we’ll still support sheet animations, but your GIFs are 1 frame)
 const PLAYER_IDLE_FRAMES  = 4, PLAYER_IDLE_COLUMNS  = 4, PLAYER_IDLE_FPS  = 6;
 const PLAYER_WALK_FRAMES  = 4, PLAYER_WALK_COLUMNS  = 4, PLAYER_WALK_FPS  = 10;
 
@@ -44,31 +45,83 @@ const EVIL_IDLE_FPS = 6;
 const EVIL_WALK_FPS = 10;
 
 // --- spacing & chase tuning ---
-const START_GAP_TILES   = 8;     // evil starts this many tiles behind
-const EVIL_START_SPEED  = 0.9;   // tiles/sec
-const EVIL_ACCEL        = 0.03;  // tiles/sec^2
+const START_GAP_TILES   = 8;
+const EVIL_START_SPEED  = 0.9;
+const EVIL_ACCEL        = 0.03;
 
 // --- bubble / far-away behavior ---
-const FAR_HIDE_GAP_TILES   = 12; // when gap >= this, hide evil sprite
-const BUBBLE_LEFT_MARGIN   = 16; // px from left edge when evil is far
+const FAR_HIDE_GAP_TILES   = 12;
+const BUBBLE_LEFT_MARGIN   = 16;
 const BUBBLE_W             = 150;
 const BUBBLE_H             = 100;
 
 /* =========================================================
-   SpriteSheet (single-row)
+   Character catalog — Najd & Salman (1-frame GIFs)
    ========================================================= */
-function SpriteSheet({
+const CHARACTERS = [
+  { key: "najd",   name: "Najd",   src: najdGif,   frames: 1, columns: 1, baselineFixPx: -6 },
+  { key: "salman", name: "Salman", src: salmanGif, frames: 1, columns: 1, baselineFixPx: -6 },
+];
+
+/* =========================================================
+   SpriteSheet (single-row). Works for 1-frame GIFs too.
+   ========================================================= */
+
+/* ---------- Single-frame image (no hooks) ---------- */
+function SpriteImage({
+  src,
+  targetW,
+  targetH,
+  pixel = true,
+  anchorY = "bottom",
+  baselineFixPx = 0,
+  className = "",
+}) {
+  return (
+    <div
+      className={className}
+      style={{
+        width: targetW,
+        height: targetH,
+        display: "grid",
+        placeItems:
+          anchorY === "bottom"
+            ? "end center"
+            : anchorY === "top"
+            ? "start center"
+            : "center",
+        overflow: "hidden",
+      }}
+    >
+      <img
+        src={src}
+        alt=""
+        draggable={false}
+        style={{
+          maxWidth: "100%",
+          maxHeight: "100%",
+          objectFit: "contain",
+          imageRendering: pixel ? "pixelated" : "auto",
+          transform: `translateY(${baselineFixPx}px)`,
+        }}
+      />
+    </div>
+  );
+}
+
+/* ---------- Multi-frame spritesheet (uses hooks) ---------- */
+function SpriteSheetAnim({
   src,
   frames = 4,
   columns = 4,
   fps = 8,
-  targetW = SPRITE_W,
-  targetH = SPRITE_H,
+  targetW,
+  targetH,
   pixel = true,
-  className = "",
   scaleMode = "fit",   // "fit" | "fitWidth"
   anchorY = "bottom",
-  baselineFixPx = 0,   // per-sprite vertical nudge inside frame
+  baselineFixPx = 0,
+  className = "",
 }) {
   const [i, setI] = useState(0);
   const [fw, setFw] = useState(0);
@@ -99,7 +152,6 @@ function SpriteSheet({
     !fw || !fh ? 1 :
     scaleMode === "fitWidth" ? (targetW / fw) : Math.min(targetW / fw, targetH / fh);
 
-  // Apply vertical baseline fix inside the frame
   let bgPosY;
   if (anchorY === "bottom") bgPosY = `calc(100% + ${baselineFixPx}px)`;
   else if (anchorY === "top") bgPosY = `${baselineFixPx}px`;
@@ -124,34 +176,44 @@ function SpriteSheet({
   );
 }
 
+/* ---------- Wrapper (no hooks here) ---------- */
+function SpriteSheet(props) {
+  const { frames = 4 } = props;
+  if (frames <= 1) return <SpriteImage {...props} />;
+  return <SpriteSheetAnim {...props} />;
+}
+
 /* ===========================
           Numbers Game
    =========================== */
 export default function Numbers() {
   // camera/vision refs
   const videoRef = useRef(null);
-  const canvasRef = useRef(null); // hidden processing canvas (kept at 0 opacity)
-  const previewRef = useRef(null); // visible mini camera in top-right
+  const canvasRef = useRef(null); // (kept for parity)
+  const previewRef = useRef(null);
   const rafRef = useRef(null);
   const landmarkerRef = useRef(null);
-  const setupOnceRef = useRef(false);
 
   // ===== AUDIO =====
-  const bgmRef = useRef(null); // <audio> element ref
+  const bgmRef = useRef(null);
 
   // game state
   const [equation, setEquation] = useState(getRandomEquation());
-  const [playerPos, setPlayerPos] = useState(0);                     // in tiles
-  const [evilPos, setEvilPos] = useState(-START_GAP_TILES);          // start far behind
+  const [playerPos, setPlayerPos] = useState(0);
+  const [evilPos, setEvilPos] = useState(-START_GAP_TILES);
   const [gameOver, setGameOver] = useState(false);
-  const [started, setStarted] = useState(false);                     // start gate
+  const [started, setStarted] = useState(false);
   const [inputNum, setInputNum] = useState(0);
   const [lastInput, setLastInput] = useState(0);
   const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);                           // streak
+  const [streak, setStreak] = useState(0);
   const [evilActive, setEvilActive] = useState(false);
   const [evilSpeed, setEvilSpeed] = useState(EVIL_START_SPEED);
   const [inputPaused, setInputPaused] = useState(false);
+
+  // NEW: character selection
+  const [selectedCharKey, setSelectedCharKey] = useState(null);
+  const selectedChar = CHARACTERS.find(c => c.key === selectedCharKey) || CHARACTERS[0];
 
   // eased display state (for smooth walking)
   const [playerDisplayPos, setPlayerDisplayPos] = useState(0);
@@ -206,23 +268,39 @@ export default function Numbers() {
     // eslint-disable-next-line
   }, [playerPos, gameOver, evilActive, inputPaused, started]);
 
-  // --- hand-tracking init (StrictMode-safe) ---
+  /* ===========================
+     Hand-tracking init: start/stop with `started`
+     =========================== */
   useEffect(() => {
-    if (setupOnceRef.current) return;
-    setupOnceRef.current = true;
+    // If not started, ensure camera + trackers are off.
+    if (!started) {
+      cancelAnimationFrame(rafRef.current);
+      landmarkerRef.current?.close();
+      landmarkerRef.current = null;
+      const v = videoRef.current;
+      if (v && v.srcObject) {
+        const tracks = v.srcObject.getTracks?.() || [];
+        tracks.forEach(t => t.stop());
+        v.srcObject = null;
+      }
+      return;
+    }
 
-    let stream;
     let cancelled = false;
+    let stream;
 
     (async () => {
       try {
-        // 1) Camera
+        // 1) Camera (user gesture already happened)
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: VIEW_W, height: VIEW_H }
+          video: { width: VIEW_W, height: VIEW_H, facingMode: "user" },
+          audio: false
         });
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
 
         const video = videoRef.current;
+        if (!video) return;
+
         video.muted = true;
         video.playsInline = true;
         video.srcObject = stream;
@@ -251,10 +329,9 @@ export default function Numbers() {
           minTrackingConfidence: 0.3,
         });
 
-        // 3) Visible mini preview (top-right)
         const pctx = previewRef.current?.getContext("2d");
 
-        // ---- helpers to count fingers ----
+        // ---- helpers to count fingers (unchanged) ----
         const angleAt = (v, a, c) => {
           const abx=a.x-v.x, aby=a.y-v.y, abz=(a.z??0)-(v.z??0);
           const cbx=c.x-v.x, cby=c.y-v.y, cbz=(c.z??0)-(v.z??0);
@@ -295,17 +372,15 @@ export default function Numbers() {
           };
         })();
 
-        // 4) Loop: detect -> compute -> update -> draw preview
+        // 3) Loop
         const loop = async () => {
           if (cancelled) return;
 
-          // Detect & get landmarks
           const res = await landmarkerRef.current.detectForVideo(
             video,
             performance.now()
           );
 
-          // Compute finger total from landmarks
           let per = [];
           if (res.landmarks?.length) {
             for (const l of res.landmarks) per.push(countHand(l));
@@ -318,38 +393,35 @@ export default function Numbers() {
           );
           setInputNum(totalFingers);
 
-          // Draw mirrored preview in top-right
+          // Draw mirrored preview
           if (pctx) {
             pctx.clearRect(0, 0, PREVIEW_W, PREVIEW_H);
-            pctx.save();
-            pctx.translate(PREVIEW_W, 0);
-            pctx.scale(-1, 1);
+            pctx.save(); pctx.translate(PREVIEW_W, 0); pctx.scale(-1, 1);
             pctx.drawImage(video, 0, 0, PREVIEW_W, PREVIEW_H);
             pctx.restore();
           }
 
           rafRef.current = requestAnimationFrame(loop);
         };
-        loop();
+        rafRef.current = requestAnimationFrame(loop);
       } catch (e) {
         console.error(e);
       }
     })();
 
+    // Cleanup when leaving started-mode or unmounting
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafRef.current);
       landmarkerRef.current?.close();
-      if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks?.() || [];
-        tracks.forEach(t => t.stop());
-        videoRef.current.srcObject = null;
-      }
-      setupOnceRef.current = false;
+      landmarkerRef.current = null;
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      const v = videoRef.current;
+      if (v) v.srcObject = null;
     };
-  }, []); // guarded by setupOnceRef
+  }, [started]);
 
-  // answer checking
+  // answer checking (unchanged)
   useEffect(() => {
     if (gameOver || inputPaused || !started) return;
     if (inputNum !== lastInput && inputNum === equation.answer) {
@@ -362,20 +434,15 @@ export default function Numbers() {
       setTimeout(() => setInputPaused(false), 500);
       setTimeout(() => setLastInput(0), 1200);
     }
-    // eslint-disable-next-line
-  }, [inputNum, equation, gameOver, inputPaused, started]);
+  }, [inputNum, equation, gameOver, inputPaused, started, lastInput]);
 
   function startGame() {
+    if (!selectedCharKey && !CHARACTERS[0]) return;
     setStarted(true);
     setEvilActive(true);
 
-    // Play ambient after the click (autoplay-safe)
     const a = bgmRef.current;
-    if (a) {
-      a.volume = 0.35;
-      a.currentTime = 0;
-      a.play().catch(() => {});
-    }
+    if (a) { a.volume = 0.35; a.currentTime = 0; a.play().catch(() => {}); }
   }
 
   function restart() {
@@ -394,7 +461,6 @@ export default function Numbers() {
     setStarted(false);
   }
 
-  // UI helper
   function renderEquation() {
     const parts = equation.text.split(" ");
     const eqn = parts.map((part, idx) =>
@@ -411,7 +477,6 @@ export default function Numbers() {
   const gapTiles  = Math.max(0, Math.round(playerDisplayPos - evilDisplayPos));
   const isEvilFar = gapTiles >= FAR_HIDE_GAP_TILES;
 
-  // position evil on screen (only clamp when not far)
   const evilXClamped = Math.max(40, Math.min(VIEW_W - 40, evilXRaw));
 
   // ---- Bubble position ----
@@ -420,7 +485,7 @@ export default function Numbers() {
     : Math.max(BUBBLE_LEFT_MARGIN, Math.min(VIEW_W - BUBBLE_W - BUBBLE_LEFT_MARGIN, evilXClamped + 28));
   const bubbleBottomY = GROUND_FROM_BOTTOM + SPRITE_H + 12;
 
-  // Pause audio on tab hide, cleanup on unmount
+  // Pause audio on tab hide
   useEffect(() => {
     const handleVis = () => {
       const a = bgmRef.current;
@@ -441,7 +506,7 @@ export default function Numbers() {
     if (!gameOver || !a) return;
     const startVol = a.volume;
     const t0 = performance.now();
-    const dur = 600; // ms
+    const dur = 600;
     let raf;
     const step = (t) => {
       const k = Math.min(1, (t - t0) / dur);
@@ -452,6 +517,13 @@ export default function Numbers() {
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [gameOver]);
+
+  // derive frames/columns/baseline from selected char (1-frame GIFs here)
+  const curIdleFrames   = selectedChar?.frames ?? 1;
+  const curIdleColumns  = selectedChar?.columns ?? 1;
+  const curWalkFrames   = selectedChar?.frames ?? 1;
+  const curWalkColumns  = selectedChar?.columns ?? 1;
+  const curBaselineFix  = selectedChar?.baselineFixPx ?? -6;
 
   return (
     <PageShell>
@@ -466,17 +538,17 @@ export default function Numbers() {
         <div className="actors">
           {/* Player */}
           <div className="actor" style={{ left: playerX, bottom: GROUND_FROM_BOTTOM }}>
-              <SpriteSheet
-                src={idleSheet}
-                frames={playerIsWalking ? PLAYER_WALK_FRAMES : PLAYER_IDLE_FRAMES}
-                columns={playerIsWalking ? PLAYER_WALK_COLUMNS : PLAYER_IDLE_COLUMNS}
-                fps={playerIsWalking ? PLAYER_WALK_FPS : PLAYER_IDLE_FPS}
-                targetW={SPRITE_W}
-                targetH={SPRITE_H}
-                anchorY="bottom"
-                scaleMode="fit"
-                baselineFixPx={-8}
-              />
+            <SpriteSheet
+              src={selectedChar?.src}
+              frames={playerIsWalking ? curWalkFrames : curIdleFrames}
+              columns={playerIsWalking ? curWalkColumns : curIdleColumns}
+              fps={playerIsWalking ? PLAYER_WALK_FPS : PLAYER_IDLE_FPS}
+              targetW={SPRITE_W}
+              targetH={SPRITE_H}
+              anchorY="bottom"
+              scaleMode="fit"
+              baselineFixPx={curBaselineFix}
+            />
           </div>
 
           {/* Evil (hidden when very far) */}
@@ -499,12 +571,7 @@ export default function Numbers() {
           {gapTiles > 0 && !gameOver && (
             <div
               className="speech"
-              style={{
-                left: bubbleLeftX,
-                bottom: bubbleBottomY,
-                width: BUBBLE_W,
-                height: BUBBLE_H
-              }}
+              style={{ left: bubbleLeftX, bottom: bubbleBottomY, width: BUBBLE_W, height: BUBBLE_H }}
               aria-label={`Evil is ${gapTiles} steps behind`}
             >
               <img src={bubbleLeft} alt="" draggable={false} />
@@ -513,31 +580,36 @@ export default function Numbers() {
           )}
         </div>
 
-        {/* Visible mini camera preview */}
-        <canvas
-          ref={previewRef}
-          className="preview-cam"
-          width={PREVIEW_W}
-          height={PREVIEW_H}
-        />
+        {/* Camera only visible/active after Start */}
+        {started && (
+          <>
+            {/* Visible mini camera preview */}
+            <canvas
+              ref={previewRef}
+              className="preview-cam"
+              width={PREVIEW_W}
+              height={PREVIEW_H}
+            />
 
-        {/* Hidden camera canvas (for hand tracking only) */}
-        <video ref={videoRef} muted playsInline style={{display:"none"}} />
-        <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="view" />
+            {/* Hidden camera canvas (for hand tracking only) */}
+            <video ref={videoRef} muted playsInline style={{ display: "none" }} />
+            <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="view" />
+          </>
+        )}
 
-        {/* Ambient audio element (hidden) */}
+        {/* Ambient audio element */}
         <audio ref={bgmRef} loop preload="auto" style={{ display: "none" }}>
           <source src={forestLoop} type="audio/mpeg" />
         </audio>
 
         {/* UI */}
         <div className="game-ui">
-          {/* Score + Streak */}
+          {/* Score */}
           <div className="score score-corner">
             <div><strong>Score:</strong> {score}</div>
           </div>
 
-          {/* Center equation: hidden until started */}
+          {/* Center equation */}
           {started && (
             <div className="eqn-center">{renderEquation()}</div>
           )}
@@ -547,14 +619,45 @@ export default function Numbers() {
             <div className="input-num">{inputNum}</div>
           </div>
 
-          {/* Overlays */}
+          {/* ===== Overlays ===== */}
+
+          {/* Character Select (before Start) */}
           {!started && !gameOver && (
             <div className="overlay start">
-              <div className="overlay-card">
-                <div className="title">Count & Run</div>
-                <div className="sub">Show the correct number with your fingers</div>
-                <button onClick={startGame} className="btn">Start</button>
-                <div className="tip">Question appears after you press Start</div>
+              <div className="overlay-card overlay-wide">
+                <div className="title">Choose your character</div>
+                <div className="sub">How to play?</div>
+                <div className="sub">Show the numbers with your fingers to fill the blank</div>
+
+                {/* Two big cards side-by-side */}
+                <div className="two-col">
+                  {CHARACTERS.map(c => {
+                    const isSel = (c.key === selectedCharKey) || (!selectedCharKey && c.key === CHARACTERS[0].key);
+                    return (
+                      <button
+                        key={c.key}
+                        className={`big-card ${isSel ? "sel" : ""}`}
+                        onClick={() => setSelectedCharKey(c.key)}
+                      >
+                        <div className="big-thumb">
+                          <SpriteSheet
+                            src={c.src}
+                            frames={1}
+                            columns={1}
+                            fps={0}
+                            targetW={160}
+                            targetH={200}
+                            anchorY="bottom"
+                            baselineFixPx={c.baselineFixPx ?? -6}
+                          />
+                        </div>
+                        <div className="big-label">{c.name}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button onClick={startGame} className="btn" disabled={!selectedChar}>Start</button>
               </div>
             </div>
           )}
@@ -590,7 +693,7 @@ function getRandomEquation() {
   return { text, answer };
 }
 
-/** Fullscreen wrapper (no title / no Home link) */
+/** Fullscreen wrapper */
 function PageShell({ children }) {
   const [scale, setScale] = useState(1);
   useEffect(() => {
@@ -616,121 +719,60 @@ function PageShell({ children }) {
 function Style() {
   return (
     <style>{`
-      /* Stage is still authored at 640x480 but scaled to fill the viewport */
-      .stage { 
-        position:relative; 
-        width:${VIEW_W}px; 
-        height:${VIEW_H}px; 
-        border-radius:12px; 
-        overflow:hidden; 
-        transform: scale(var(--s, 1));
-        transform-origin: center center;
-      }
+      .stage { position:relative; width:${VIEW_W}px; height:${VIEW_H}px; border-radius:12px; overflow:hidden; transform: scale(var(--s, 1)); transform-origin: center center; }
 
-      /* Background layers */
-      .bg{
-        position:absolute; inset:0; pointer-events:none;
-        background-repeat: repeat-x;
-        background-size: auto 100%;
-        image-rendering: pixelated;
-      }
+      .bg{ position:absolute; inset:0; pointer-events:none; background-repeat: repeat-x; background-size: auto 100%; image-rendering: pixelated; }
       .bg.base{ background-repeat:no-repeat; background-size:cover; background-position:center; z-index: 0; }
       .bg.far  { z-index: 1; opacity:.95; }
       .bg.mid  { z-index: 2; }
       .bg.near { z-index: 3; }
 
-      /* Actors float above near layer */
       .actors { position:absolute; inset:0; z-index: 4; pointer-events:none; }
       .actor  { position:absolute; transform: translateX(-50%); }
 
-      /* Hidden processing canvas (kept underneath actors) */
       .view  { position:absolute; inset:0; z-index: 2; opacity:0; }
 
-      /* Visible mini camera in top-right */
       .preview-cam{
-        position:absolute;
-        top:12px;
-        right:12px;
-        z-index: 8;
-        width: ${PREVIEW_W}px;
-        height: ${PREVIEW_H}px;
-        border-radius: 10px;
-        box-shadow: 0 4px 14px rgba(0,0,0,.35);
-        background: #000;
-        outline: 2px solid rgba(255,255,255,.15);
+        position:absolute; top:12px; right:12px; z-index: 8;
+        width: ${PREVIEW_W}px; height: ${PREVIEW_H}px; border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.35); background: #000; outline: 2px solid rgba(255,255,255,.15);
         pointer-events: none;
       }
 
-      /* UI on top */
       .game-ui { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; z-index:6; pointer-events:none; }
 
-      .score-corner {
-        position: absolute; top: 18px; left: 18px; font-size: 1.1em;
-        background: rgba(0,0,0,0.7); padding: 8px 14px; border-radius: 10px; z-index: 7;
-        line-height: 1.1;
-      }
+      .score-corner { position: absolute; top: 18px; left: 18px; font-size: 1.1em; background: rgba(0,0,0,0.7); padding: 8px 14px; border-radius: 10px; z-index: 7; line-height: 1.1; }
       .score-corner strong { color: #9ad; }
 
-      .eqn-center {
-        position: absolute; top: 80px; left: 0; width: 100%;
-        display: flex; justify-content: center; z-index: 7;
-      }
-      .eqn-big {
-        font-size: 2.8em; font-weight: bold; letter-spacing: 2px; color: #fff;
-        background: rgba(0,0,0,0.75); padding: 18px 32px 14px; border-radius: 18px;
-        display: flex; align-items: center; gap: 0.2em;
-      }
-      .eqn-box {
-        display: inline-block; width: 1.2em; height: 1.2em; background: #222;
-        border: 3px solid #fff; border-radius: 7px; vertical-align: middle; margin: 0 0.18em;
-      }
+      .eqn-center { position: absolute; top: 80px; left: 0; width: 100%; display: flex; justify-content: center; z-index: 7; }
+      .eqn-big { font-size: 2.8em; font-weight: bold; letter-spacing: 2px; color: #fff; background: rgba(0,0,0,0.75); padding: 18px 32px 14px; border-radius: 18px; display: flex; align-items: center; gap: 0.2em; }
+      .eqn-box { display: inline-block; width: 1.2em; height: 1.2em; background: #222; border: 3px solid #fff; border-radius: 7px; vertical-align: middle; margin: 0 0.18em; }
 
       .input { margin-bottom:10px; text-align:center; }
       .input-num { font-size:2em; margin-top:2px; }
 
       /* Overlays */
-      .overlay {
-        position:absolute; inset:0; z-index:10; display:grid; place-items:center; background: rgba(0,0,0,0.35);
-        pointer-events:auto;
-      }
-      .overlay-card {
-        background: rgba(0,0,0,0.85);
-        padding: 22px 26px; border-radius: 16px; min-width: 320px; text-align:center;
-        box-shadow: 0 8px 24px rgba(0,0,0,.4);
-      }
+      .overlay { position:absolute; inset:0; z-index:10; display:grid; place-items:center; background: rgba(0,0,0,0.35); pointer-events:auto; }
+      .overlay-card { background: rgba(0,0,0,0.85); padding: 22px 26px; border-radius: 16px; min-width: 320px; text-align:center; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+      .overlay-wide { width: min(95%, 880px); }
       .overlay .title { font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
       .overlay .sub { opacity: .9; margin-bottom: 14px; }
-      .overlay .tip { opacity: .7; margin-top: 10px; font-size: .9rem; }
-      .overlay .btn {
-        margin-top: 6px; padding: 10px 18px; border-radius: 12px; border: 0;
-        background: #9ad; color: #0b0b0b; font-weight: 800; cursor: pointer;
-      }
+      .overlay .btn { margin-top: 10px; padding: 10px 18px; border-radius: 12px; border: 0; background: #9ad; color: #0b0b0b; font-weight: 800; cursor: pointer; pointer-events: auto; }
+      .overlay .btn[disabled] { opacity: .5; cursor: not-allowed; }
       .overlay .btn:hover { filter: brightness(1.05); }
 
-      /* ===== Speech bubble (evil talks) ===== */
-      .speech{
-        position:absolute;
-        z-index:5;
-        pointer-events:none;
-      }
-      .speech img{
-        width:100%;
-        height:100%;
-        display:block;
-        filter: drop-shadow(0 2px 2px rgba(0,0,0,.35));
-      }
-      .speech span{
-        position:absolute;
-        top: 44%;
-        left: 46%;
-        transform: translate(-50%,-50%);
-        font-weight: 900;
-        font-size: 34px;
-        line-height: 1;
-        color: #222;
-        text-shadow: 0 1px 0 rgba(255,255,255,.35),
-                     0 2px 4px rgba(0,0,0,.25);
-      }
+      /* Two big cards like your screenshot */
+      .two-col { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 10px 0 6px; }
+      .big-card { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background: rgba(255,255,255,.06); border: 2px solid transparent; border-radius: 16px; padding: 12px 10px; cursor:pointer; transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease; pointer-events: auto; }
+      .big-card:hover{ transform: translateY(-2px); }
+      .big-card.sel{ border-color: #9ad; box-shadow: 0 0 0 3px rgba(154,173,221,.2) inset; }
+      .big-thumb{ width: 180px; height: 210px; display:grid; place-items:end center; }
+      .big-label{ font-size:1.05rem; font-weight:800; opacity:.95; }
+
+      /* Speech bubble */
+      .speech{ position:absolute; z-index:5; pointer-events:none; }
+      .speech img{ width:100%; height:100%; display:block; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+      .speech span{ position:absolute; top: 44%; left: 46%; transform: translate(-50%,-50%); font-weight: 900; font-size: 34px; line-height: 1; color: #222; text-shadow: 0 1px 0 rgba(255,255,255,.35), 0 2px 4px rgba(0,0,0,.25); }
     `}</style>
   );
 }
