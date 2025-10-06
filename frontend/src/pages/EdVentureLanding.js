@@ -5,23 +5,29 @@ const EdVentureLanding = () => {
   const [activeSection, setActiveSection] = useState('problem');
   const sectionsRef = useRef({});
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPos = window.scrollY + 200;
-      const sections = ['problem', 'solution', 'team', 'demo'];
-      
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const section = sectionsRef.current[sections[i]];
-        if (section && scrollPos >= section.offsetTop) {
-          setActiveSection(sections[i]);
-          break;
-        }
+useEffect(() => {
+  const handleScroll = () => {
+    const scrollPos = window.scrollY + 200;
+    const sections = ['problem', 'solution', 'team', 'demo'];
+    
+    // If near top of page, clear active section
+    if (window.scrollY < 100) {
+      setActiveSection('');
+      return;
+    }
+    
+    for (let i = sections.length - 1; i >= 0; i--) {
+      const section = sectionsRef.current[sections[i]];
+      if (section && scrollPos >= section.offsetTop) {
+        setActiveSection(sections[i]);
+        break;
       }
-    };
+    }
+  };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  window.addEventListener('scroll', handleScroll);
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
 
   const scrollToSection = (sectionId) => {
     const section = sectionsRef.current[sectionId];
@@ -63,7 +69,7 @@ const EdVentureLanding = () => {
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/We",
       linkedin: "https://www.linkedin.com/in/fai-alradhi-caie™-080b66228/",
       email: "Faialradhi@gmail.com",
-      description: "Project coordinator ensuring seamless teamwork and high-impact outcomes."
+      description: "Software Engineering graduate, Apple Developer Academy alumnus, certified in AI & Cloud, innovating impactful digital solutions."
     },
     {
       first: "Mohammad",
@@ -79,7 +85,7 @@ const EdVentureLanding = () => {
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/We",
       linkedin: "https://www.linkedin.com/in/mjd-alamri-pnu/",
       email: "mjdmalamri@gmail.com",
-      description: "IT specialist optimizing systems through analytics, AI, and collaborative problem-solving."
+      description: "Computer Science graduate passionate about AI, data analytics, and UI/UX design, combining creativity with problem-solving leadership"
     },
   ];
 
@@ -89,9 +95,10 @@ const EdVentureLanding = () => {
       <header style={styles.header}>
         <div style={styles.headerContent}>
           <img 
-            src="https://companieslogo.com/img/orig/ACN_BIG.D-871a76ce.png?t=1720244490"
+            src="logo.png"
             alt="Logo"
-            style={styles.logo}
+            style={{...styles.logo, cursor: 'pointer'}}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           />
           
           <nav style={styles.nav}>
@@ -321,7 +328,7 @@ const styles = {
     gap: 16,
   },
   logo: {
-    height: 44,
+    height: 60,
     width: 'auto',
   },
   nav: {
