@@ -126,7 +126,7 @@ const EdVentureLanding = () => {
           </p>
           <div style={styles.heroButtons}>
             <a
-              href="https://team1-mathproject.netlify.app/"
+              href="https://team1-mathgproject.netlify.app"
               target="_blank"
               rel="noopener noreferrer"
               style={styles.primaryButton}
@@ -217,7 +217,7 @@ const EdVentureLanding = () => {
             <h2 style={styles.ctaTitle}>Experience It Yourself — Try the Demo</h2>
             <div style={styles.ctaButtons}>
               <a
-                href="https://team1-mathproject.netlify.app/"
+                href="https://team1-mathgproject.netlify.app"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={styles.primaryButton}
