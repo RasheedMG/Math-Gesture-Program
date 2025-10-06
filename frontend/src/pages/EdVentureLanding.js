@@ -55,7 +55,7 @@ const EdVentureLanding = () => {
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/Rasheed",
       linkedin: "https://www.linkedin.com/in/rasheedmg/",
       email: "rasheedalghamdi1998@gmail.com",
-      description: "AI-driven technologist building innovative solutions through data and software."
+      description: "BSc. Computer Science | KFUPM | Cloud-Native Developer | Full-Stack | Agile | DevOps | GCP Certified"
     },
     {
       first: "Fai",
