@@ -332,10 +332,10 @@ const styles = {
     borderRadius: 999,
     border: '1px solid rgba(255, 255, 255, 0.1)',
   },
-  navItem: {
+navItem: {
     padding: '10px 18px',
     background: 'transparent',
-    border: 'none',
+    border: '1px solid transparent',
     color: '#C9CDE6',
     fontSize: 13,
     fontWeight: 800,
@@ -343,11 +343,20 @@ const styles = {
     borderRadius: 999,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
+    outline: 'none',
   },
   navItemActive: {
-    backgroundColor: 'rgba(123, 44, 255, 0.22)',
+    padding: '10px 18px',
+    background: 'rgba(123, 44, 255, 0.22)',
     border: '1px solid #7B2CFF',
     color: '#ffffff',
+    fontSize: 13,
+    fontWeight: 800,
+    letterSpacing: 0.5,
+    borderRadius: 999,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    outline: 'none',
   },
   
   // Hero
