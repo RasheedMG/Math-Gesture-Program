@@ -39,7 +39,7 @@ const EdVentureLanding = () => {
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/Besmelh",
       linkedin: "https://www.linkedin.com/in/besmelh-alshaalan/",
       email: "besmelh.alshaalan@gmail.com",
-      description: "Project coordinator ensuring seamless teamwork and high-impact outcomes."
+      description: "M.S. Computer Science | Software Developer | Cloud, Full-Stack, XR & Graphics | UI/UX & User Research"
     },
     {
       first: "Shaykha",
@@ -55,7 +55,7 @@ const EdVentureLanding = () => {
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/Rasheed",
       linkedin: "https://www.linkedin.com/in/rasheedmg/",
       email: "rasheedalghamdi1998@gmail.com",
-      description: "Project coordinator ensuring seamless teamwork and high-impact outcomes."
+      description: "AI-driven technologist building innovative solutions through data and software."
     },
     {
       first: "Fai",
@@ -71,7 +71,7 @@ const EdVentureLanding = () => {
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/Mohammed",
       linkedin: "https://www.linkedin.com/in/mohammed-alsarrah/",
       email: "malsarrah0@gmail.com",
-      description: "Project coordinator ensuring seamless teamwork and high-impact outcomes."
+      description: "Data and AI professional bridging engineering, analytics, and strategic business impact."
     },
     {
       first: "Mjd",
@@ -79,7 +79,7 @@ const EdVentureLanding = () => {
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/We",
       linkedin: "https://www.linkedin.com/in/mjd-alamri-pnu/",
       email: "mjdmalamri@gmail.com",
-      description: "Project coordinator ensuring seamless teamwork and high-impact outcomes."
+      description: "IT specialist optimizing systems through analytics, AI, and collaborative problem-solving."
     },
   ];
 
