@@ -42,6 +42,7 @@ useEffect(() => {
     {
       first: "Besmelh",
       last: "Alshalaan",
+      title: "M.S. Computer Science",
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/Besmelh",
       linkedin: "https://www.linkedin.com/in/besmelh-alshaalan/",
       email: "besmelh.alshaalan@gmail.com",
@@ -50,6 +51,7 @@ useEffect(() => {
     {
       first: "Shaykha",
       last: "Almaani",
+      title: "B.S. Computer Science",
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/We",
       linkedin: "https://www.linkedin.com/in/shaykha-almaani/",
       email: "shaykhah.abdullah.a@gmail.com",
@@ -58,6 +60,7 @@ useEffect(() => {
     {
       first: "Rasheed",
       last: "Alghamdi",
+      title: "B.S. Computer Science",
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/Rasheed",
       linkedin: "https://www.linkedin.com/in/rasheedmg/",
       email: "rasheedalghamdi1998@gmail.com",
@@ -66,6 +69,7 @@ useEffect(() => {
     {
       first: "Fai",
       last: "Alradhi",
+      title: "B.S. Software Engineering",
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/We",
       linkedin: "https://www.linkedin.com/in/fai-alradhi-caie™-080b66228/",
       email: "Faialradhi@gmail.com",
@@ -74,6 +78,7 @@ useEffect(() => {
     {
       first: "Mohammad",
       last: "Alsarrah",
+      title: "B.S. Industrial Engineering",
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/Mohammed",
       linkedin: "https://www.linkedin.com/in/mohammed-alsarrah/",
       email: "malsarrah0@gmail.com",
@@ -82,6 +87,7 @@ useEffect(() => {
     {
       first: "Mjd",
       last: "Alamri",
+      title: "B.S. Computer Science",
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/We",
       linkedin: "https://www.linkedin.com/in/mjd-alamri-pnu/",
       email: "mjdmalamri@gmail.com",
@@ -131,7 +137,7 @@ useEffect(() => {
           <p style={styles.heroSubtitle}>
             Making education fun, engaging, and trackable
           </p>
-          <div style={styles.heroButtons}>
+          {/*<div style={styles.heroButtons}>
             <a
               href="https://team1-mathgproject.netlify.app"
               target="_blank"
@@ -141,6 +147,30 @@ useEffect(() => {
               Try the Demo Now
               <ChevronRight size={20} style={{ marginLeft: 8 }} />
             </a>
+          </div>*/}
+        <div style={{display: "flex", gap: "40px"}}>
+          <div style={styles.heroButtons}>
+            <a
+              href="https://team1-mathgproject.netlify.app/games-mode"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.primaryButton}
+            >
+              Student Games & Portal
+              <ChevronRight size={20} style={{ marginLeft: 8 }} />
+            </a>
+          </div>
+          <div style={styles.heroButtons}>
+            <a
+              href="https://team1-mathgproject.netlify.app/TeacherD"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.primaryButton}
+            >
+              Teacher Portal
+              <ChevronRight size={20} style={{ marginLeft: 8 }} />
+            </a>
+          </div>
           </div>
         </div>
       </section>
@@ -222,9 +252,15 @@ useEffect(() => {
           <div style={styles.ctaBackground} />
           <div style={styles.ctaContent}>
             <h2 style={styles.ctaTitle}>Experience It Yourself — Try the Demo</h2>
-            <div style={styles.ctaButtons}>
+            {/* YouTube Video */}
+<div className="flex justify-center mb-12">
+  <div className="w-full max-w-2xl aspect-video bg-slate-800/50 rounded-xl overflow-hidden backdrop-blur-sm border border-purple-500/20">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/FWhTFumayI4?si=39jbCZxUb2bzb_kU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+  </div>
+</div>
+<div style={{ ...styles.ctaButtons, marginTop: "20px" }}>
               <a
-                href="https://team1-mathgproject.netlify.app"
+                href="https://team1-mathgproject.netlify.app/games-mode"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={styles.primaryButton}
@@ -235,7 +271,8 @@ useEffect(() => {
             </div>
           </div>
         </div>
-      </section>
+      </section> 
+
 
       {/* Footer */}
       <footer style={styles.footer}>
@@ -271,7 +308,7 @@ const TeamCard = ({ member }) => (
         />
       </div>
       <div style={styles.teamInfo}>
-        <span style={styles.teamLabel}>TEAM MEMBER</span>
+        <span style={styles.teamLabel}>{member.title}</span>
         <h3 style={styles.teamName}>{member.first} {member.last}</h3>
         <p style={styles.teamDescription}>
           {member.description}
@@ -314,7 +351,8 @@ const styles = {
     top: 0,
     zIndex: 1000,
     backdropFilter: 'blur(12px)',
-    backgroundColor: 'rgba(10, 13, 31, 0.85)',
+    // backgroundColor: 'rgba(10, 13, 31, 0.85)',
+background: 'linear-gradient(to bottom, rgba(10, 13, 31, 0) 0%, rgba(10, 13, 31, 0.85) 100%)',
     borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
   },
   headerContent: {
@@ -334,7 +372,8 @@ const styles = {
   nav: {
     display: 'flex',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    // backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    background: 'linear-gradient(to bottom, rgba(10, 13, 31, 0.85) 0%, rgba(10, 13, 31, 0) 100%)',
     padding: 6,
     borderRadius: 999,
     border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -369,14 +408,14 @@ navItem: {
   // Hero
   hero: {
     position: 'relative',
-    minHeight: 'calc(100vh - 76px)',
+    minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundImage: 'url(https://sb.kaleidousercontent.com/133458/5000x3137/18ff54b4fa/pexels-max-fischer-5212700.jpg)',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
-    padding: '80px 24px',
+    padding: '0 24px',
   },
   heroOverlay: {
     position: 'absolute',
