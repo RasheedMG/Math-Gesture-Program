@@ -55,7 +55,7 @@ useEffect(() => {
       avatar: "https://github.com/MjdMAlamri/Images/raw/refs/heads/main/We",
       linkedin: "https://www.linkedin.com/in/shaykha-almaani/",
       email: "shaykhah.abdullah.a@gmail.com",
-      description: "Project coordinator ensuring seamless teamwork and high-impact outcomes."
+      description: "AI and Digital Innovation Specialist with experience delivering automation, cloud, and AI solutions across consulting, training, and product development."
     },
     {
       first: "Rasheed",
