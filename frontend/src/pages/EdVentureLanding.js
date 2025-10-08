@@ -255,7 +255,7 @@ useEffect(() => {
             {/* YouTube Video */}
 <div className="flex justify-center mb-12">
   <div className="w-full max-w-2xl aspect-video bg-slate-800/50 rounded-xl overflow-hidden backdrop-blur-sm border border-purple-500/20">
-<iframe width="560" height="315" src="https://www.youtube.com/embed/FWhTFumayI4?si=39jbCZxUb2bzb_kU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/UbpUQNZIzIE?si=TlcUjn1HmxyTRrMW" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
   </div>
 </div>
 <div style={{ ...styles.ctaButtons, marginTop: "20px" }}>
